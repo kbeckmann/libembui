@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdbool.h>
 
 typedef enum {
     EUI_PIXEL_FORMAT_MONO_1 = 1,    // 1 bit per pixel
@@ -23,7 +24,7 @@ typedef struct {
     int32_t height;
 } eui_size_t;
 
-typedef struct {
+typedef struct eui_rect {
     eui_pos_t pos;
     eui_size_t size;
 } eui_rect_t;
@@ -46,13 +47,34 @@ typedef struct eui_node {
     struct eui_node *next;
 } eui_node_t;
 
+typedef struct eui_animation_state {
+    float duration;
+    int32_t repeat_count;
+    bool running;
+    float value; // [0..1]
+} eui_animation_state_t;
+
+struct eui_animation_node;
+
+typedef void (*eui_animation_apply_cb)(void *transformed_source, const struct eui_animation_node * const animation_state);
+
+struct eui_animation_node {
+    eui_node_t node;
+    eui_animation_apply_cb apply_to_data;
+    float *state;
+};
+typedef struct eui_animation_node eui_animation_node_t;
+
 typedef struct {
     eui_node_t node;
 
     eui_node_type_t type;
+    bool visible;
     eui_rect_t rect;
     eui_color_t color;
     // type (rectangle, circle ...)
+
+    eui_animation_node_t *color_animator, *rect_animator;
 } eui_shape_t;
 
 typedef struct {
@@ -67,9 +89,6 @@ typedef struct {
     eui_asset_t asset;
 } eui_image_t;
 
-
-
-
 typedef struct {
     eui_node_t *root;
 } eui_renderer_priv_t;
@@ -78,20 +97,22 @@ typedef struct {
     void *framebuffer;
     eui_pixel_format_t format;
     eui_size_t size;
-    eui_rect_t active_area;
 
     eui_renderer_priv_t priv;
 } eui_renderer_t;
 
 
 
-// typedef struct {
-//     eui_renderer_t *renderer;
-// } eui_context_t;
+typedef struct {
+    eui_renderer_t *renderer;
+    eui_animation_state_t *animation_states;
+    uint32_t state_count;
+} eui_context_t;
 
-// typedef struct {
+typedef struct {
     
-// } eui_event_t;
+} eui_event_t;
+
 
 
 typedef enum {
@@ -106,7 +127,6 @@ typedef enum {
         (((_b))        >>  3)        \
     )
 
-
 #define EUI_INIT_SHAPE(_shape, _x, _y, _width, _height, _color) do { \
     (_shape).node.prev = NULL;               \
     (_shape).node.next = NULL;               \
@@ -117,19 +137,61 @@ typedef enum {
     (_shape).rect.size.width = (_width);     \
     (_shape).rect.size.height = (_height);   \
     (_shape).color = (_color);               \
+    (_shape).rect_animator = NULL;           \
+    (_shape).color_animator = NULL;          \
 } while (0)
 
+#define eui_create_animation_state(_duration, _repeat_count, _running) \
+    { \
+        .duration = _duration, \
+        .repeat_count = _repeat_count, \
+        .running = _running, \
+        .value = (_duration<0?1:0), \
+    }
+
+#define eui_create_animation_node(_animation_apply_cb, _target_state) \
+    { \
+        .apply_to_data = _animation_apply_cb, \
+        .node.prev = NULL, \
+        .node.next = NULL, \
+        .state = &_target_state.value, \
+    }
+
+static inline float eui_easein(float x)
+{
+    // f(x) = x^2
+    return x*x;
+}
+
+static inline float eui_easeout(float x)
+{
+    // f(x) = -x^2 + 2x
+    return -x * x + 2 * x;
+}
+
+static inline float eui_easeinout(float x)
+{
+    // x<= 0.5: f(x) = 2x^2
+    // x > 0.5: f(x) = -2x^2 + 4x - 1
+    float mix;
+    float x2 = x * x;
+
+    if (x <= 0.5) {
+        mix = 2 * x2;
+    } else {
+        mix = -2*x2 + 4*x - 1;
+    }
+
+    return mix;
+}
 
 eui_err_t eui_renderer_init(eui_renderer_t *renderer);
 eui_err_t eui_renderer_run(eui_renderer_t *renderer);
 eui_err_t eui_renderer_set_root(eui_renderer_t *renderer, eui_node_t *root);
-
+eui_err_t eui_set_animation_states(eui_context_t *context, eui_animation_state_t *states, uint32_t state_count);
 void eui_node_insert(eui_node_t *node, eui_node_t *next);
-
-
-
-// void eui_init(eui_context_t *ctx);
-// void eui_post_event(eui_context_t *ctx, eui_event_t *event);
-// void eui_run(eui_context_t *ctx);
+eui_err_t eui_init(eui_context_t *ctx);
+eui_err_t eui_post_event(eui_context_t *ctx, eui_event_t *event);
+eui_err_t eui_run(eui_context_t *ctx);
 
 
