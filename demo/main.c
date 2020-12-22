@@ -42,7 +42,7 @@ int init_window(int width, int height)
 
 typedef struct eui_animation_node_ex {
     eui_animation_node_t node;
-    float period, diameter, offset;
+    float offset;
 } eui_animation_node_ex_t;
 
 void animation_apply_x(void *transformed_source, const eui_animation_node_t * const anim_node)
@@ -50,16 +50,34 @@ void animation_apply_x(void *transformed_source, const eui_animation_node_t * co
     eui_animation_node_ex_t *st = (eui_animation_node_ex_t*) anim_node;
     eui_rect_t *rect = (eui_rect_t *)transformed_source;
 
-    float value = (eui_easeinout(*st->node.state))*3.14159*2 * st->period + st->offset;
+    float value = (*st->node.state);
 
-    float s = sin(value);
-    float c = cos(value);
+    rect->pos.x += (value+st->offset)*(WIDTH/3+10);
+    rect->pos.y += 0;
+}
 
-    float w = rect->size.width;
-    float h = rect->size.height;
+void add_box(eui_shape_t *shape_bg, eui_shape_t *shape_fg0, eui_shape_t *shape_fg1, eui_shape_t *shape_fg2, eui_animation_state_t *anim, uint32_t offset, eui_animation_node_ex_t *anim_fg)
+{
+    eui_color_t green = { .value = 0xff00ff00 };
+    eui_color_t blue  = { .value = 0xffff0000 };
 
-    rect->pos.x += s * st->diameter - cos(value) * (w/2);
-    rect->pos.y += c * st->diameter + sin(value) * (h/2);
+    EUI_INIT_SHAPE(*shape_fg0, 10, 10,    WIDTH/3,     (HEIGHT*3)/4, green);
+    EUI_INIT_SHAPE(*shape_fg1, 20, 10+10,    WIDTH/3-20,     30, blue);
+    EUI_INIT_SHAPE(*shape_fg2, 20, 60,    WIDTH/3-20,     120, blue);
+    eui_node_add_last(&shape_bg->node, &shape_fg0->node);
+    eui_node_add_last(&shape_bg->node, &shape_fg1->node);
+    eui_node_add_last(&shape_bg->node, &shape_fg2->node);
+
+    *anim_fg = (eui_animation_node_ex_t){
+        .node = eui_create_animation_node(animation_apply_x, *anim),
+        .offset = offset
+    };
+
+    shape_fg0->rect_animator = (eui_animation_node_t*)anim_fg;
+    shape_fg1->rect_animator = (eui_animation_node_t*)anim_fg;
+    shape_fg2->rect_animator = (eui_animation_node_t*)anim_fg;
+
+
 }
 
 int main(int argc, char *argv[])
@@ -78,22 +96,12 @@ int main(int argc, char *argv[])
     init_window(WIDTH, HEIGHT);
 
     eui_shape_t shape_bg;
-    eui_shape_t shape_fg0, shape_fg1, shape_fg2, shape_fg3;
 
     eui_color_t red   = { .value = 0xff0000ff };
-    eui_color_t green = { .value = 0xff00ff00 };
-    eui_color_t blue  = { .value = 0xffff0000 };
 
-    EUI_INIT_SHAPE(shape_bg,  0,     0, WIDTH, HEIGHT, red);
-    EUI_INIT_SHAPE(shape_fg0, WIDTH/2, HEIGHT/2,    10,     10, green);
-    EUI_INIT_SHAPE(shape_fg1, WIDTH/2, HEIGHT/2,    10,     10, blue);
-    EUI_INIT_SHAPE(shape_fg2, WIDTH/2, HEIGHT/2,    10,     10, blue);
-    EUI_INIT_SHAPE(shape_fg3, WIDTH/2, HEIGHT/2,    10,     10, blue);
+    EUI_INIT_SHAPE(shape_bg,  0, 0, WIDTH, HEIGHT, red);
 
-    eui_node_insert(&shape_bg.node,  &shape_fg0.node);
-    eui_node_insert(&shape_fg0.node, &shape_fg1.node);
-    eui_node_insert(&shape_fg1.node, &shape_fg2.node);
-    eui_node_insert(&shape_fg2.node, &shape_fg3.node);
+    
 
     res = eui_renderer_init(&renderer);
     assert(res == EUI_ERR_OK);
@@ -105,33 +113,18 @@ int main(int argc, char *argv[])
     };
     eui_init(&context);
 
-    eui_animation_state_t anim_x_states[] = {
-        eui_create_animation_state(8000, -1, true),
+    eui_animation_state_t anim_states[] = {
+        eui_create_animation_state(500, 0, false, true),
     };
+    anim_states[0].ease_cb = eui_easeinout;
 
-    eui_set_animation_states(&context, anim_x_states, sizeof(anim_x_states)/sizeof(anim_x_states[0]));
+    eui_set_animation_states(&context, anim_states, sizeof(anim_states)/sizeof(anim_states[0]));
 
-    eui_animation_node_ex_t anim_fg0 = {
-        .node = eui_create_animation_node(animation_apply_x, anim_x_states[0]),
-        .period = 1, .diameter = 30, .offset = 0,
-    };
-    eui_animation_node_ex_t anim_fg1 = {
-        .node = eui_create_animation_node(animation_apply_x, anim_x_states[0]),
-        .period = 1, .diameter = 30, .offset = 3.14159265/2,
-    };
-    eui_animation_node_ex_t anim_fg2 = {
-        .node = eui_create_animation_node(animation_apply_x, anim_x_states[0]),
-        .period = 1, .diameter = 30, .offset = 3.14159265,
-    };
-    eui_animation_node_ex_t anim_fg3 = {
-        .node = eui_create_animation_node(animation_apply_x, anim_x_states[0]),
-        .period = 1, .diameter = 30, .offset = 3.14159265*3.f/2,
-    };
-
-    shape_fg0.rect_animator = &anim_fg0.node;
-    shape_fg1.rect_animator = &anim_fg1.node;
-    shape_fg2.rect_animator = &anim_fg2.node;
-    shape_fg3.rect_animator = &anim_fg3.node;
+    eui_shape_t shape_fg[30];
+    eui_animation_node_ex_t anim_fg[10];
+    for(int i=0;i<10;++i){
+        add_box(&shape_bg, &shape_fg[i*3], &shape_fg[i*3+1], &shape_fg[i*3+2], &anim_states[0], i+1, &anim_fg[i]);
+    }
 
     while (running) {
 
@@ -149,9 +142,23 @@ int main(int argc, char *argv[])
                 case SDLK_q:
                     running = 0;
                     break;
-                case SDLK_SPACE:
-                    anim_x_states[0].running = ! anim_x_states[0].running;
+                case SDLK_RIGHT:
+                    if(!anim_states[0].running && anim_states[0].offset > -9){
+                        anim_states[0].offset-=1;
+                        anim_states[0].duration = -500;
+                        anim_states[0].anim_value = 1;
+                        anim_states[0].running = true;
+                    }
                     break;
+                case SDLK_LEFT:
+                    if(!anim_states[0].running && anim_states[0].offset < 0){
+                        anim_states[0].offset+=1;
+                        anim_states[0].duration = 500;
+                        anim_states[0].anim_value = 0;
+                        anim_states[0].running = true;
+                    }
+                    break;
+
                 default:
                     break;
                 }

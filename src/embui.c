@@ -18,10 +18,14 @@ void render_shape_rgb565(eui_renderer_t *renderer, eui_color_t color, eui_rect_t
                      ((color.rgba.g & 0xfc) <<  3) |
                      ((color.rgba.b)        >>  3);
 
-        int32_t start_x = rect.pos.x;
+        int32_t start_x = rect.pos.x < 0 ? 0 : rect.pos.x;
         int32_t end_x   = rect.pos.x + rect.size.width;
-        int32_t start_y = rect.pos.y;
+        end_x = end_x >= fb_size.width ? (fb_size.width - 1) : end_x;
+
+        int32_t start_y = rect.pos.y < 0 ? 0 : rect.pos.y;
         int32_t end_y   = rect.pos.y + rect.size.height;
+        end_y = end_y >= fb_size.height ? (fb_size.height - 1) : end_y;
+
         for (int32_t y = start_y; y < end_y; y++) {
             uint16_t *row = &fb[y * stride];
             for (int32_t x = start_x; x < end_x; x++) {
@@ -97,6 +101,19 @@ void eui_node_insert(eui_node_t *node, eui_node_t *next)
     next->next = old_next;
 }
 
+void eui_node_add_last(eui_node_t *node, eui_node_t *next)
+{
+    eui_node_t *old_next = node->next;
+
+    while (old_next != NULL) {
+        node = old_next;
+        old_next = node->next;
+    }
+
+    node->next = next;
+    next->next = old_next;
+}
+
 eui_err_t eui_renderer_set_root(eui_renderer_t *renderer, eui_node_t *root)
 {
     renderer->priv.root = root;
@@ -106,23 +123,27 @@ eui_err_t eui_renderer_set_root(eui_renderer_t *renderer, eui_node_t *root)
 
 void eui_update_animation_state_linear(eui_animation_state_t *state, float time_delta)
 {
-    if(state->running){
-        state->value += time_delta / state->duration;
-        if(state->repeat_count != 0 && state->value > 1 ) {
-            state->value -= 1;
+    if (state->running) {
+        state->anim_value += time_delta / state->duration;
+        if (state->repeat_count != 0 && state->anim_value > 1 ) {
+            state->anim_value -= 1;
             state->repeat_count--;
         }
-        if(state->repeat_count != 0 && state->value < 0 ) {
-            state->value += 1;
+        if (state->repeat_count != 0 && state->anim_value < 0 ) {
+            state->anim_value += 1;
             state->repeat_count--;
         }
-        if(state->repeat_count == 0 && state->value > 1) {
-            state->value = 1;
+        if (state->repeat_count == 0 && state->anim_value > 1) {
+            state->anim_value = 1;
+            state->running = false;
         }
-        if(state->repeat_count == 0 && state->value < 0) {
-            state->value = 0;
+        if (state->repeat_count == 0 && state->anim_value < 0) {
+            state->anim_value = 0;
+            state->running = false;
         }
     }
+
+    state->value = state->ease_cb(state->anim_value) + state->offset - (state->duration > 0 ? 1 : 0);
 }
 
 eui_err_t eui_update_animation_states(eui_context_t *ctx)

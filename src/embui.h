@@ -47,11 +47,16 @@ typedef struct eui_node {
     struct eui_node *next;
 } eui_node_t;
 
+typedef float (*eui_interpolation_cb)(float x);
+
 typedef struct eui_animation_state {
     float duration;
     int32_t repeat_count;
     bool running;
     float value; // [0..1]
+    float anim_value;
+    float offset;
+    eui_interpolation_cb ease_cb;
 } eui_animation_state_t;
 
 struct eui_animation_node;
@@ -120,42 +125,12 @@ typedef enum {
     EUI_ERR_ERROR,
 } eui_err_t;
 
-#define RGB888_TO_RGB565(_r, _g, _b) \
-    (                                \
-        (((_r) & 0xf8) <<  8) |      \
-        (((_g) & 0xfc) <<  3) |      \
-        (((_b))        >>  3)        \
-    )
 
-#define EUI_INIT_SHAPE(_shape, _x, _y, _width, _height, _color) do { \
-    (_shape).node.prev = NULL;               \
-    (_shape).node.next = NULL;               \
-    (_shape).type = EUI_NODE_TYPE_SHAPE;     \
-    (_shape).type = EUI_NODE_TYPE_SHAPE;     \
-    (_shape).rect.pos.x = (_x);              \
-    (_shape).rect.pos.y = (_y);              \
-    (_shape).rect.size.width = (_width);     \
-    (_shape).rect.size.height = (_height);   \
-    (_shape).color = (_color);               \
-    (_shape).rect_animator = NULL;           \
-    (_shape).color_animator = NULL;          \
-} while (0)
-
-#define eui_create_animation_state(_duration, _repeat_count, _running) \
-    { \
-        .duration = _duration, \
-        .repeat_count = _repeat_count, \
-        .running = _running, \
-        .value = (_duration<0?1:0), \
-    }
-
-#define eui_create_animation_node(_animation_apply_cb, _target_state) \
-    { \
-        .apply_to_data = _animation_apply_cb, \
-        .node.prev = NULL, \
-        .node.next = NULL, \
-        .state = &_target_state.value, \
-    }
+static inline float eui_lerp(float x)
+{
+    // f(x) = x
+    return x;
+}
 
 static inline float eui_easein(float x)
 {
@@ -185,11 +160,53 @@ static inline float eui_easeinout(float x)
     return mix;
 }
 
+
+#define RGB888_TO_RGB565(_r, _g, _b) \
+    (                                \
+        (((_r) & 0xf8) <<  8) |      \
+        (((_g) & 0xfc) <<  3) |      \
+        (((_b))        >>  3)        \
+    )
+
+#define EUI_INIT_SHAPE(_shape, _x, _y, _width, _height, _color) do { \
+    (_shape).node.prev = NULL;               \
+    (_shape).node.next = NULL;               \
+    (_shape).type = EUI_NODE_TYPE_SHAPE;     \
+    (_shape).type = EUI_NODE_TYPE_SHAPE;     \
+    (_shape).rect.pos.x = (_x);              \
+    (_shape).rect.pos.y = (_y);              \
+    (_shape).rect.size.width = (_width);     \
+    (_shape).rect.size.height = (_height);   \
+    (_shape).color = (_color);               \
+    (_shape).rect_animator = NULL;           \
+    (_shape).color_animator = NULL;          \
+} while (0)
+
+#define eui_create_animation_state(_duration, _repeat_count, _running, _at_end) \
+    { \
+        .duration = _duration, \
+        .repeat_count = _repeat_count, \
+        .running = _running, \
+        .anim_value = (_duration<0?(_at_end?0:1):(_at_end?1:0)), \
+        .value = 0, \
+        .offset = 0, \
+        .ease_cb = &eui_lerp, \
+    }
+
+#define eui_create_animation_node(_animation_apply_cb, _target_state) \
+    { \
+        .apply_to_data = _animation_apply_cb, \
+        .node.prev = NULL, \
+        .node.next = NULL, \
+        .state = &(_target_state).value, \
+    }
+
 eui_err_t eui_renderer_init(eui_renderer_t *renderer);
 eui_err_t eui_renderer_run(eui_renderer_t *renderer);
 eui_err_t eui_renderer_set_root(eui_renderer_t *renderer, eui_node_t *root);
 eui_err_t eui_set_animation_states(eui_context_t *context, eui_animation_state_t *states, uint32_t state_count);
 void eui_node_insert(eui_node_t *node, eui_node_t *next);
+void eui_node_add_last(eui_node_t *node, eui_node_t *next);
 eui_err_t eui_init(eui_context_t *ctx);
 eui_err_t eui_post_event(eui_context_t *ctx, eui_event_t *event);
 eui_err_t eui_run(eui_context_t *ctx);
