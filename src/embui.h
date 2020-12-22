@@ -3,13 +3,13 @@
 #include <stdint.h>
 
 typedef enum {
-    EUI_PIXEL_FORMAT_MONO_1 = 0,    // 1 bit per pixel
+    EUI_PIXEL_FORMAT_MONO_1 = 1,    // 1 bit per pixel
     EUI_PIXEL_FORMAT_RGB_565,       // 16 bits per pixel
     EUI_PIXEL_FORMAT_RGBA_8888,     // 32 bits per pixel
 } eui_pixel_format_t;
 
 typedef enum {
-    EUI_NODE_TYPE_SHAPE = 0,
+    EUI_NODE_TYPE_SHAPE = 1,
     EUI_NODE_TYPE_IMAGE,
 } eui_node_type_t;
 
@@ -31,14 +31,24 @@ typedef struct {
 
 
 
-typedef struct {
-    uint8_t r;
-    uint8_t g;
-    uint8_t b;
-    uint8_t a;
+typedef union {
+    struct {
+        uint8_t r;
+        uint8_t g;
+        uint8_t b;
+        uint8_t a;
+    } rgba;
+    uint32_t value;
 } eui_color_t;
 
+typedef struct eui_node {
+    struct eui_node *prev;
+    struct eui_node *next;
+} eui_node_t;
+
 typedef struct {
+    eui_node_t node;
+
     eui_node_type_t type;
     eui_rect_t rect;
     eui_color_t color;
@@ -57,11 +67,6 @@ typedef struct {
     eui_asset_t asset;
 } eui_image_t;
 
-typedef struct eui_node {
-    struct eui_node *prev;
-    struct eui_node *next;
-    eui_shape_t *shape;
-} eui_node_t;
 
 
 
@@ -103,6 +108,10 @@ typedef enum {
 
 
 #define EUI_INIT_SHAPE(_shape, _x, _y, _width, _height, _color) do { \
+    (_shape).node.prev = NULL;               \
+    (_shape).node.next = NULL;               \
+    (_shape).type = EUI_NODE_TYPE_SHAPE;     \
+    (_shape).type = EUI_NODE_TYPE_SHAPE;     \
     (_shape).rect.pos.x = (_x);              \
     (_shape).rect.pos.y = (_y);              \
     (_shape).rect.size.width = (_width);     \
@@ -114,6 +123,8 @@ typedef enum {
 eui_err_t eui_renderer_init(eui_renderer_t *renderer);
 eui_err_t eui_renderer_run(eui_renderer_t *renderer);
 eui_err_t eui_renderer_set_root(eui_renderer_t *renderer, eui_node_t *root);
+
+eui_err_t eui_node_insert(eui_node_t *node, eui_node_t *next);
 
 
 

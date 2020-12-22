@@ -62,45 +62,20 @@ int main(int argc, char *argv[])
     eui_shape_t shape_fg1;
     eui_shape_t shape_fg2;
 
-    eui_color_t red = {
-        .r = 0xff,
-        .g = 0x00,
-        .b = 0x00,
-        .a = 0xff,
-    };
-
-    eui_color_t green = {
-        .r = 0x00,
-        .g = 0xff,
-        .b = 0x00,
-        .a = 0xff,
-    };
-
-    eui_color_t blue = {
-        .r = 0x00,
-        .g = 0x00,
-        .b = 0xff,
-        .a = 0xff,
-    };
+    eui_color_t red   = { .value = 0xff0000ff };
+    eui_color_t green = { .value = 0xff00ff00 };
+    eui_color_t blue  = { .value = 0xffff0000 };
 
     EUI_INIT_SHAPE(shape_bg,  0,     0, WIDTH, HEIGHT, red);
     EUI_INIT_SHAPE(shape_fg1, 100, 100,    50,     50, green);
     EUI_INIT_SHAPE(shape_fg2, 125, 125,    50,     50, blue);
 
-    eui_node_t node_bg =  { .shape = &shape_bg };
-    eui_node_t node_fg1 = { .shape = &shape_fg1 };
-    eui_node_t node_fg2 = { .shape = &shape_fg2 };
-
-    node_bg.prev = NULL;
-    node_bg.next = &node_fg1;
-    node_fg1.prev = &node_bg;
-    node_fg1.next = &node_fg2;
-    node_fg2.prev = &node_fg1;
-    node_fg2.next = NULL;
+    eui_node_insert(&shape_bg, &shape_fg1);
+    eui_node_insert(&shape_fg1, &shape_fg2);
 
     res = eui_renderer_init(&renderer);
     assert(res == EUI_ERR_OK);
-    res = eui_renderer_set_root(&renderer, &node_bg);
+    res = eui_renderer_set_root(&renderer, &shape_bg.node);
     assert(res == EUI_ERR_OK);
 
     while (running) {

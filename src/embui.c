@@ -14,11 +14,11 @@ void render_shape_rgb565(eui_renderer_t *renderer, eui_shape_t *shape)
     uint16_t *fb = (uint16_t *) renderer->framebuffer;
     uint32_t stride = fb_size.width;
 
-    if (source_color.a == 0xff) {
+    if (source_color.rgba.a == 0xff) {
         // Opaque
-        draw_color = ((source_color.r & 0xf8) <<  8) |
-                     ((source_color.g & 0xfc) <<  3) |
-                     ((source_color.b)        >>  3);
+        draw_color = ((source_color.rgba.r & 0xf8) <<  8) |
+                     ((source_color.rgba.g & 0xfc) <<  3) |
+                     ((source_color.rgba.b)        >>  3);
 
         int32_t start_x = area.pos.x + shape->rect.pos.x;
         int32_t end_x   = area.pos.x + shape->rect.pos.x + shape->rect.size.width;
@@ -44,13 +44,17 @@ eui_err_t eui_renderer_run(eui_renderer_t *renderer)
 {
     eui_node_t *node = renderer->priv.root;
     eui_pixel_format_t dest_fmt = renderer->format;
+    eui_shape_t *shape;
 
     while (node != NULL) {
-        switch (node->shape->type) {
+        shape = (eui_shape_t *) node;
+        assert(shape->type == EUI_NODE_TYPE_SHAPE);
+
+        switch (shape->type) {
         case EUI_NODE_TYPE_SHAPE:
             switch (dest_fmt) {
             case EUI_PIXEL_FORMAT_RGB_565:
-                render_shape_rgb565(renderer, node->shape);
+                render_shape_rgb565(renderer, shape);
                 break;
             default:
                 assert(!"Unhandled pixel format.");
@@ -64,6 +68,13 @@ eui_err_t eui_renderer_run(eui_renderer_t *renderer)
     }
 
     return EUI_ERR_OK;
+}
+
+eui_err_t eui_node_insert(eui_node_t *node, eui_node_t *next)
+{
+    eui_node_t * old_next = node->next;
+    node->next = next;
+    next->next = old_next;
 }
 
 eui_err_t eui_renderer_set_root(eui_renderer_t *renderer, eui_node_t *root)
