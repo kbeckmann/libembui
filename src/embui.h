@@ -124,7 +124,7 @@ eui_err_t eui_renderer_init(eui_renderer_t *renderer);
 eui_err_t eui_renderer_run(eui_renderer_t *renderer);
 eui_err_t eui_renderer_set_root(eui_renderer_t *renderer, eui_node_t *root);
 
-eui_err_t eui_node_insert(eui_node_t *node, eui_node_t *next);
+void eui_node_insert(eui_node_t *node, eui_node_t *next);
 
 
 

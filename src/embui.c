@@ -70,7 +70,7 @@ eui_err_t eui_renderer_run(eui_renderer_t *renderer)
     return EUI_ERR_OK;
 }
 
-eui_err_t eui_node_insert(eui_node_t *node, eui_node_t *next)
+void eui_node_insert(eui_node_t *node, eui_node_t *next)
 {
     eui_node_t * old_next = node->next;
     node->next = next;
