@@ -7,6 +7,7 @@
 #define WIDTH  320
 #define HEIGHT 240
 #define BPP      2
+#define SCALE    4
 
 SDL_Window *window;
 SDL_Renderer *sdl_renderer;
@@ -20,7 +21,7 @@ int init_window(int width, int height)
 
     window = SDL_CreateWindow("demo",
         SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-        width, height,
+        width * SCALE, height * SCALE,
         0);
     if (!window)
         return 0;
