@@ -70,8 +70,8 @@ int main(int argc, char *argv[])
     EUI_INIT_SHAPE(shape_fg1, 100, 100,    50,     50, green);
     EUI_INIT_SHAPE(shape_fg2, 125, 125,    50,     50, blue);
 
-    eui_node_insert(&shape_bg, &shape_fg1);
-    eui_node_insert(&shape_fg1, &shape_fg2);
+    eui_node_insert(&shape_bg.node, &shape_fg1.node);
+    eui_node_insert(&shape_fg1.node, &shape_fg2.node);
 
     res = eui_renderer_init(&renderer);
     assert(res == EUI_ERR_OK);
