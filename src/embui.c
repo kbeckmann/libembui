@@ -20,11 +20,11 @@ void render_shape_rgb565(eui_renderer_t *renderer, eui_color_t color, eui_rect_t
 
         int32_t start_x = rect.pos.x < 0 ? 0 : rect.pos.x;
         int32_t end_x   = rect.pos.x + rect.size.width;
-        end_x = end_x >= fb_size.width ? (fb_size.width - 1) : end_x;
+        end_x = (end_x >= fb_size.width) ? fb_size.width : end_x;
 
         int32_t start_y = rect.pos.y < 0 ? 0 : rect.pos.y;
         int32_t end_y   = rect.pos.y + rect.size.height;
-        end_y = end_y >= fb_size.height ? (fb_size.height - 1) : end_y;
+        end_y = (end_y >= fb_size.height) ? fb_size.height : end_y;
 
         for (int32_t y = start_y; y < end_y; y++) {
             uint16_t *row = &fb[y * stride];
